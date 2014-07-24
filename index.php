@@ -47,31 +47,31 @@ function Delete_Table($table)
 // creation of table was successful or not
 function Create_Table($table, $ROWS)
 {
-		// delete old table if exists
-		Delete_Table($table);
-		// write code for creating two new tables with name format user_parking_xW
-		// where x is 4 or 2 and user is the user_name
-		// set status as true if table creation is successful
-		$sql = "CREATE TABLE ".$table." (slot_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, vehicle_no VARCHAR(20) NOT NULL, mobile_no INT NOT NULL, Time INT NOT NULL, Lim INT NOT NULL DEFAULT ".$ROWS." );";
-		// establish connection to db							  
-		$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
-		mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
-		//execute query to create table 
-		$retval = mysql_query( $sql) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
+ 	// delete old table if exists
+	Delete_Table($table);
+	// write code for creating two new tables with name format user_parking_xW
+	// where x is 4 or 2 and user is the user_name
+	// set status as true if table creation is successful
+	$sql = "CREATE TABLE ".$table." (slot_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, vehicle_no VARCHAR(20) NOT NULL, mobile_no INT NOT NULL, Time INT NOT NULL, Lim INT NOT NULL DEFAULT ".$ROWS." );";
+	// establish connection to db							  
+	$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+	mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+	//execute query to create table 
+	$retval = mysql_query( $sql) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
         if($retval)
-		{
-			// insert a dummy row with all values set as 0, this makes sure table is never empty
-			$qry = "INSERT INTO ".$table." (vehicle_no, mobile_no, Time) VALUES ('0', 0, 0);";
+	{
+		// insert a dummy row with all values set as 0, this makes sure table is never empty
+		$qry = "INSERT INTO ".$table." (vehicle_no, mobile_no, Time) VALUES ('0', 0, 0);";
         	$newresult = mysql_query( $qry) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());		
-		}
-		else
-		{
-			echo "table creation failed";
-		}
-		//close connection with db
+	}
+	else
+	{
+		echo "table creation failed";
+	}
+	//close connection with db
         mysql_close($link);
  
-		return $retval;
+	return $retval;
  
 }
  
@@ -92,10 +92,10 @@ function Reset_Table($table)
 	$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
 	mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
 	//exec query
-    $retval = mysql_query( $sql) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
+    	$retval = mysql_query( $sql) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
 	// insert a dummy row with all values as 0 to make sure table doesnt remain empty
 	$qry = "INSERT INTO ".$table." (vehicle_no, mobile_no, Time) VALUES ('0', 0, 0);";
-    $newresult = mysql_query( $qry) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
+	$newresult = mysql_query( $qry) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
 	//close db
 	mysql_close($link);
  
@@ -113,9 +113,9 @@ function Table_Status($table)
 	$query = " SELECT vehicle_no FROM ".$table." WHERE vehicle_no != '0';";
 	$result = mysql_query( $query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
 	$status = 0;
-    // get num of rows which have vehicles id
+    	// get num of rows which have vehicles id
 	$status = mysql_num_rows($result);
-    // close db
+    	// close db
 	mysql_close($link);
  
 	return $status;
@@ -152,37 +152,47 @@ function Block_Parking($table, $vehicle, $mobile)
 	$table_lim = Get_Table_Lim($table);
 	// initialize return value to 0
 	$retval = 0;
-	// check 
+	// check if any slot is empty, if yes then get the empty slot, or if table has not reached its limit,
+	//then insert a new row
 	if ($table_lim > $status)
 	{
+	        // there is space in table, connect to the DB
 		$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
 		mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+		// get the rows which have no vechile in them means they were previously got unblocked
 		$query = "SELECT * FROM ".$table." WHERE vehicle_no = '0';";
 		$result = mysql_query($query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error()); 
+		// get the number of rows
 		$numResults = mysql_num_rows($result);
- 
+                //if there are no rows which are free, we will insert one more row as there is space in table
 		if ($numResults == 0)
 		{
- 
+                        // insert the row with the data
 			$qry = "INSERT INTO ".$table." (vehicle_no, mobile_no, Time) VALUES ('$vehicle', $mobile, $time);";
-            $newresult = mysql_query( $qry) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error()); 
+        	        $newresult = mysql_query( $qry) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error()); 
+			// get the row number which was inserted and save it for slot number to return
 			$retval = mysql_insert_id();
  
 		}
 		else
-		{
+		{       // came here because there was atleast one row which was unblocked earlier
+			// fetch all the results in an associative array
 			$row = mysql_fetch_array($result, MYSQL_ASSOC);
+			// get the slot_id value of first row fetched 
 			$slot = $row["slot_id"];
+			// free memory
 			mysql_free_result($result);
- 
+                        // just making sure with this if condition that we arent exceeding the table limit
 			if($slot <= $table_lim)
 			{
+			        // updating the row with new data
 			 	$query = " UPDATE ".$table." SET vehicle_no = '".$vehicle."', mobile_no = ".$mobile.", Time = ".$time." WHERE slot_id = '$slot';";
    				$result = mysql_query( $query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error()); 
+				// returning the slot_id
 				$retval = $slot;
 			}
 		}
- 
+                //close DB
 		mysql_close($link);
 	}
 	else
@@ -194,13 +204,20 @@ function Block_Parking($table, $vehicle, $mobile)
  
 }
  
+// function to unblock a parking space 
 function Unblock_Parking($table, $vehicle)
 {
+        // connect to the DB
 	$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
 	mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+   	// find the row having the vehicle nummber and unblock it
    	$query = " UPDATE ".$table." SET vehicle_no = 0, mobile_no = 0, Time = 0 WHERE vehicle_no = '$vehicle';";
    	$retval = mysql_query( $query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
+	
+	// close db
 	mysql_close($link);
+	
+	//if successful echo
 	if ($retval)
 	{
 		echo "successfully unblocked your parking";
@@ -208,52 +225,59 @@ function Unblock_Parking($table, $vehicle)
 	return $retval;
 }
  
+// function for user login, authentication is dependent on how password was hashed during signup 
 function User_Login()
 {
    if (isset($_GET['user']) && isset($_GET['password']))
 	{
- 
+                // get user name and password from url
 		$user = $_GET['user'];
 		$password = $_GET['password'];
+		//connect to DB
 		$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
 		mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
 		$user=mysql_real_escape_string($user);
+   	 	// find if username exist in table
    	 	$query = "SELECT * FROM login WHERE username = '$user';";
 		$result = mysql_query($query);
+		//get the number of rows having that username
 		$numResults = mysql_num_rows($result);
+		//if number of rows is zero that means that user isnt registered yet
 		if($numResults==0)
 		{
 			echo "user does not exist";
 		}
 		else
 		{
+		        // get data in an associative array
 			$userData = mysql_fetch_array($result, MYSQL_ASSOC);
-        	$hash = hash('sha256', $password.$userData['salt']);
+        	        // take the salt of the first result and hash it with password
+        	        $hash = hash('sha256', $password.$userData['salt']);
 			mysql_free_result($result);
-       		if($hash != $userData['password']) // Incorrect password. So, redirect to login_form again.
-        	{
-           		//header('Location: index.php');
-           		echo "invalid password";
+       		        if($hash != $userData['password']) // Incorrect password.
+        	        {
+           		
+           		        echo "invalid password";
 			}
 			else
 			{ 
-				//header('Location: home.html');
+				
 				/* output in necessary format */
 				$token = $userData['uid'];
 				header('Content-type: application/json');
-				//echo json_encode($token);
-            	session_start();
-	        	$_SESSION["Login"] = "YES";
-	        	$_SESSION["Time"] = time();
-	        	$_SESSION["Username"] = $user;
-            	$_SESSION["Sessionid"] = session_id();
-            	echo json_encode(array('session'=>$_SESSION));
+                        	session_start();
+	        	        $_SESSION["Login"] = "YES";
+	        	        $_SESSION["Time"] = time();
+	        	        $_SESSION["Username"] = $user;
+	        	        $_SESSION["uid"] = $token;
+            	                $_SESSION["Sessionid"] = session_id();
+            	                echo json_encode(array('session'=>$_SESSION));
 			}
 		}	
 		@mysql_close($link);
 	}
 }
- 
+// function to logout an user
 function User_Logout()
 {
  
@@ -262,19 +286,15 @@ function User_Logout()
   	$_SESSION = array();
   	// If it's desired to kill the session, also delete the session cookie.
  	 // Note: This will destroy the session, and not just the session data!
- 	 if (ini_get("session.use_cookies")) 
+ 	if (ini_get("session.use_cookies")) 
   	{
-    	$params = session_get_cookie_params();
-    	setcookie(session_name(), '', time() - 42000,
-   					$params["path"], $params["domain"],
-    				$params["secure"], $params["httponly"]
-    			  );
-    }
+    	        $params = session_get_cookie_params();
+    	        setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"] );
+        }
  
 	// Finally, destroy the session.
 	session_destroy();
 	echo "you have successfully logged out";
- 
  
 }
  
@@ -319,9 +339,9 @@ else
  
 			if(isset($_GET["num_2W"]) && isset($_GET["num_4W"]))
 			{
-                $num2w = $_GET["num_2W"];
-                $num4w = $_GET["num_4W"];
- 
+                                $num2w = $_GET["num_2W"];
+                                $num4w = $_GET["num_4W"];
+         
 				if((Create_Table($table2W, $num2w)) && (Create_Table($table4W, $num4w)))
 				{
 					echo "success";
