@@ -456,7 +456,7 @@ else
 				if ($block)
 				{
  
-		                     echo json_encode(array('slot_id'=>"4w".$retval, 'time'=>localtime(), 'vehicle'=>$vehicleid, 'contact'=>$mobilenum ));
+		                     echo json_encode(array('slot_id'=>$wheels."W".$retval, 'time'=>localtime(), 'vehicle'=>$vehicleid, 'contact'=>$mobilenum ));
  
 				}
 				else
