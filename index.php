@@ -297,19 +297,68 @@ function User_Logout()
 	echo "you have successfully logged out";
  
 }
+
+
+function NewUser() 
+{ 
+ $name = $_GET['name'];
+ $username = $_GET['user'];
+ $email = $_GET['email'];
+ $password = $_GET['password']; 
+ $random_salt = hash('sha256', uniqid(mt_rand(1, mt_getrandmax()), true));
+ // Create salted password 
+ $password = hash('sha256', $password . $random_salt);
+ $link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+ mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+ $query = "INSERT INTO login (name,username,email,password, salt) VALUES ('$name','$username','$email','$password', '$random_salt')"; 
+ $data = mysql_query ($query)or die(mysql_error());
+ // close db
+ mysql_close($link);
+ if($data) 
+ { 
+   echo "YOUR REGISTRATION IS COMPLETED..."; 
+ }
+} 
+
  
 function User_Signup()
 {
+	if(!empty($_GET['user'])) //checking the 'user' name which is from Sign-Up.html, is it empty or have some text 
+ 	{ 
+		$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+		mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+   		$query = mysql_query("SELECT * FROM login WHERE username = '$_GET[user]'") or die(mysql_error());
+   		// close db
+		mysql_close($link);
+		$numResults = mysql_num_rows($query);
+		
+   		//if(!$row = mysql_fetch_array($query) or die(mysql_error()))
+   		if($numResults == 0)
+   		{ 
+    		NewUser(); 
+   		} 
+   		else
+   		{
+     		echo "SORRY...USERNAME ALREADY EXISTS..."; 
+   		}	  
+ 	}
 }
  
 function User_Delete()
 {
+	
+	$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+	mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+   	$query = mysql_query("DELETE FROM login WHERE username = '$_GET[user]'") or die(mysql_error());
+	echo "user $_GET[user] was deleted from database";
+	
 }
  
 session_start();
  
 if (($_SESSION["Login"] != "YES") &&
-	!((isset($_GET["user"])) && ($_GET["service"] == SERVICE_USER_LOGIN) &&(isset($_GET["password"])))) // trying to login
+	!((isset($_GET["user"])) && ($_GET["service"] == SERVICE_USER_LOGIN) &&(isset($_GET["password"]))) && // trying to login
+        !($_GET["service"]==SERVICE_USER_SIGNUP)) // trying for signup
 {
 	// not logged in`
 	echo "please login";
@@ -471,3 +520,4 @@ else
  
 ?>
  
+	
