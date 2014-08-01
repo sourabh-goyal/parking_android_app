@@ -356,9 +356,11 @@ function User_Delete()
  
 session_start();
  
-if (($_SESSION["Login"] != "YES") &&
-	!((isset($_GET["user"])) && ($_GET["service"] == SERVICE_USER_LOGIN) &&(isset($_GET["password"]))) && // trying to login
-        !($_GET["service"]==SERVICE_USER_SIGNUP)) // trying for signup
+//if (($_SESSION["Login"] != "YES") &&
+//	!((isset($_GET["user"])) && ($_GET["service"] == SERVICE_USER_LOGIN) &&(isset($_GET["password"]))) && // trying to login
+//        !($_GET["service"]==SERVICE_USER_SIGNUP)) // trying for signup
+
+if((isset($_GET["user"])) && (isset($_GET["service"])))
 {
 	// not logged in`
 	echo "please login";
