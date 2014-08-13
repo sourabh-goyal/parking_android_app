@@ -2,7 +2,7 @@
  
 include '../sql_access.php';
  
-define('SERVICE_SETTINGS_CREATE','1');	// will create new tables
+define('SERVICE_SETTINGS_CONFIGURE','1');	// will create new tables (configure the parking)
 define('SERVICE_SETTINGS_RESET','2'); // will clear all the rows of tables
 define('SERVICE_SETTINGS_DELETE','3');	// will delete tables
 //define('SERVICE_SETTINGS_EXPAND','4');	// will expand current table
@@ -14,6 +14,7 @@ define('SERVICE_BLOCK', '9');	// block a parking space
 define('SERVICE_UNBLOCK', '10');	// unblock a parking space
 define('SERVICE_UNBLOCK_ALL', 'SERVICE_SETTINGS_RESET'); // unblock all the parking space
 define('SERVICE_STATUS', '11');
+define ('SERVICE_VEHICLE_REGISTERATION', '12');
  
 // check if table exists in database, if exists then deletes it
  
@@ -217,11 +218,6 @@ function Unblock_Parking($table, $vehicle)
 	// close db
 	mysql_close($link);
 
-	//if successful echo
-	if ($retval)
-	{
-		echo "successfully unblocked your parking";
-	}
 	return $retval;
 }
  
@@ -351,96 +347,100 @@ function User_Delete()
 	mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
    	$query = mysql_query("DELETE FROM login WHERE username = '$_GET[user]'") or die(mysql_error());
 	echo "user $_GET[user] was deleted from database";
-
+	mysql_close($link);
 }
- 
+
 session_start();
- 
-//if (($_SESSION["Login"] != "YES") &&
-//	!((isset($_GET["user"])) && ($_GET["service"] == SERVICE_USER_LOGIN) &&(isset($_GET["password"]))) && // trying to login
-//        !($_GET["service"]==SERVICE_USER_SIGNUP)) // trying for signup
 
-if(!(isset($_GET["user"])) && !(isset($_GET["service"])))
+if (isset($_GET[service]))
 {
-	// not logged in`
-	echo "please login";
-	exit();
-}
-else
-{
-	if(isset($_GET["user"]) && isset($_GET["service"]))
+	
+	$service = $_GET[service];
+	switch($service)
 	{
-		$service = $_GET["service"];
-		$user = $_GET["user"];
-		$table2W = $user."parking_2W";
-		$table4W = $user."parking_4W";
- 
-		switch($service)
-		{
-		case SERVICE_SETTINGS_RESET :
- 
-			if ((Reset_Table($table2W)) && (Reset_Table($table4W)))
-			{
-				echo "success"; 
-			}
- 
+		case SERVICE_USER_LOGIN:
+		
+			User_Login(); // needs updats for user type
 			break;
- 
-		case SERVICE_SETTINGS_CREATE : //done
- 
-			if(isset($_GET["num_2W"]) && isset($_GET["num_4W"]))
-			{
-                                $num2w = $_GET["num_2W"];
-                                $num4w = $_GET["num_4W"];
-         
-				if((Create_Table($table2W, $num2w)) && (Create_Table($table4W, $num4w)))
-				{
-					echo "success";
-				}
- 
-			}
-			break;
- 
-		case SERVICE_SETTINGS_DELETE : //done
- 
-			// delete parking space
-			// delete user_parking_4W and user_parking_2W
-			if ((Delete_Table($table2W)) && (Delete_Table($table4W)))
-			{
-				echo "successly deleted all the tables";
-			}
-			break;
- 
-//		case SERVICE_SETTINGS_EXPAND :
-//			Expand_Table();
-//			break;
- 
+		
 		case SERVICE_USER_LOGOUT : // done
  
 			User_Logout();
 			break;
- 
+			
 		case SERVICE_USER_SIGNUP :
  
-			User_Signup();
+			User_Signup(); //needs update for user type
 			break;
- 
-		case SERVICE_USER_LOGIN : // done
- 
-			User_Login();
-			break;
- 
-		case SERVICE_USER_DELETE :
+		
+		case SERVICE_USER_DELETE : //done
  
 			User_Delete();
 			break;
- 
-		case SERVICE_BLOCK :
-			if (isset($_GET["vehicleid"]) && isset($_GET["wheels"]) && isset($_GET["mobile"]))
+		
+		case SERVICE_VEHICLE_REGISTERATION : 
+		
+			Add_Vehicle(); //todo
+			break;
+			
+		case SERVICE_SETTINGS_CONFIGURE : 
+ 			
+			$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+			mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+   			$query = mysql_query("SELECT * FROM login WHERE username = '$user'") or die(mysql_error());
+			$userData = mysql_fetch_array($query, MYSQL_ASSOC);
+			$user_type = $userData['user_type'];
+			mysql_close($link);
+			
+			if($user_type=="admin")
 			{
-				$wheels = $_GET["wheels"];
+				if (isset($_GET["company"]) && isset($_GET["num_2W"]) && isset($_GET["num_4W"]) && isset($_GET["floor"]))
+				{
+					$company = $_GET["company"];
+					$floor = $_GET["floor"];
+					$num2w = $_GET["num_2W"];
+					$num4w = $_GET["num_4W"];
+					$table2W = $company."parking_2W";
+					$table4W = $company."parking_4W";
+					
+					UpdateCompanyInfo(); //todo
+					
+					Create_Table($table2W, $num2w);
+					Create_Table($table4W, $num4w);
+						
+				}
+				else
+				{
+					echo "insufficient params";
+				}
+			}
+			else
+			{
+				echo "permission denied, insufficient privilages";
+			}
+			
+			break;
+		
+		case SERVICE_BLOCK :
+			
+			if (isset($_GET["vehicleid"]))
+			{
 				$vehicleid = $_GET["vehicleid"];
-				$mobilenum = $_GET["mobile"];
+				$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+				mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+   				$query = mysql_query("SELECT * FROM vehicles WHERE vehicle_no = '$vehicleid'") or die(mysql_error());
+				$vehicleData = mysql_fetch_array($query, MYSQL_ASSOC);	
+				$wheels = $vehicleData['wheeler'];
+				$mobilenum = $vehicleData['mobile_no'];
+				$company = $vehicleData['company_name'];
+				$query = mysql_query("SELECT * FROM company_info WHERE company_name = '$company'") or die(mysql_error());
+				$CompanyData = mysql_fetch_array($query, MYSQL_ASSOC);
+				$floor = $CompanyData['parking_floor'];
+				mysql_close($link);
+				
+				$table2W = $company."parking_2W";
+				$table4W = $company."parking_4W";
+				
 				if ($wheels == 2)
 				{
 					$block = Block_Parking($table2W, $vehicleid, $mobilenum);		
@@ -458,7 +458,7 @@ else
 				if ($block)
 				{
  
-		                     echo json_encode(array('slot_id'=>$wheels."W".$retval, 'time'=>localtime(), 'vehicle'=>$vehicleid, 'contact'=>$mobilenum ));
+		            echo json_encode(array('slot_id'=>$wheels."W".$retval, 'floor'=>$floor, 'time'=>localtime(), 'vehicle'=>$vehicleid, 'contact'=>$mobilenum ));
  
 				}
 				else
@@ -470,21 +470,44 @@ else
  
 		case SERVICE_UNBLOCK : //done
  
-			if (isset($_GET["vehicleid"]) && isset($_GET["wheels"]))
+			if (isset($_GET["vehicleid"]))
 			{
-				$wheels = $_GET["wheels"];
+				
 				$vehicleid = $_GET["vehicleid"];
+				$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+				mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+   				$query = mysql_query("SELECT * FROM vehicles WHERE vehicle_no = '$vehicleid'") or die(mysql_error());
+				$vehicleData = mysql_fetch_array($query, MYSQL_ASSOC);	
+				$wheels = $vehicleData['wheeler'];
+				$mobilenum = $vehicleData['mobile_no'];
+				$company = $vehicleData['company_name'];
+				$query = mysql_query("SELECT * FROM company_info WHERE company_name = '$company'") or die(mysql_error());
+				$CompanyData = mysql_fetch_array($query, MYSQL_ASSOC);
+				$floor = $CompanyData['parking_floor'];
+				mysql_close($link);
+				$table2W = $company."parking_2W";
+				$table4W = $company."parking_4W";
+				
 				if ($wheels == 2)
 				{
-					Unblock_Parking ($table2W, $vehicleid);
+					$unblock = Unblock_Parking ($table2W, $vehicleid);
 				}
 				else if ($wheels == 4)
 				{
-					Unblock_Parking($table4W, $vehicleid);
+					$unblock = Unblock_Parking($table4W, $vehicleid);
 				}
 				else
 				{
 					echo "these vehicles are not supported";
+				}
+				
+				if($unblock)
+				{
+					echo json_encode(array('time'=>localtime(), 'vehicle'=>$vehicleid, 'contact'=>$mobilenum ));
+				}
+				else
+				{
+					echo "failed to unblock";
 				}
 			}
 			else
@@ -492,7 +515,12 @@ else
 				echo "insuffiecient params in URI";
 			}
 			break;
+			
 		case SERVICE_STATUS :
+		
+			$company = $_GET['company'];
+			$table2W = $company."parking_2W";
+			$table4W = $company."parking_4W";
 			$w4_status = Table_Status($table4W);
 			$w2_status = Table_Status($table2W);
 			$w4_lim = Get_Table_Lim($table4W);
@@ -502,24 +530,28 @@ else
 			$Wheeler_2 = array('blocked'=> $w2_status, 'free' =>$w2_free);
 			$Wheeler_4 = array('blocked'=> $w4_status, 'free' =>$w4_free);
 			echo json_encode(array('four_wheeler'=>$Wheeler_4, 'two_wheeler'=>$Wheeler_2 ));
- 
-			break;
-//		case SERVICE_UNBLOCK_ALL :
-//			Reset_Table();
+			break; 			
+		
+//		case SERVICE_SETTINGS_RESET :
+//
+//			if ((Reset_Table($table2W)) && (Reset_Table($table4W)))
+//			{
+//				echo "success"; 
+//			}
+// 
 //			break;
 		default:
 			echo "service type not supported";
 			echo $service;
 			break;
-		}
-	}	
-	else
-	{
-		echo "error in your request";
 	}
-}
- 
- 
-?>
- 
 	
+	
+}
+else
+{
+	echo "no service defined";
+}
+
+
+?>
