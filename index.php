@@ -213,10 +213,10 @@ function Unblock_Parking($table, $vehicle)
    	// find the row having the vehicle nummber and unblock it
    	$query = " UPDATE ".$table." SET vehicle_no = 0, mobile_no = 0, Time = 0 WHERE vehicle_no = '$vehicle';";
    	$retval = mysql_query( $query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
-	
+
 	// close db
 	mysql_close($link);
-	
+
 	//if successful echo
 	if ($retval)
 	{
@@ -261,7 +261,7 @@ function User_Login()
 			}
 			else
 			{ 
-				
+
 				/* output in necessary format */
 				$token = $userData['uid'];
 				header('Content-type: application/json');
@@ -331,7 +331,7 @@ function User_Signup()
    		// close db
 		mysql_close($link);
 		$numResults = mysql_num_rows($query);
-		
+
    		//if(!$row = mysql_fetch_array($query) or die(mysql_error()))
    		if($numResults == 0)
    		{ 
@@ -346,12 +346,12 @@ function User_Signup()
  
 function User_Delete()
 {
-	
+
 	$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
 	mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
    	$query = mysql_query("DELETE FROM login WHERE username = '$_GET[user]'") or die(mysql_error());
 	echo "user $_GET[user] was deleted from database";
-	
+
 }
  
 session_start();
@@ -360,7 +360,7 @@ session_start();
 //	!((isset($_GET["user"])) && ($_GET["service"] == SERVICE_USER_LOGIN) &&(isset($_GET["password"]))) && // trying to login
 //        !($_GET["service"]==SERVICE_USER_SIGNUP)) // trying for signup
 
-if((isset($_GET["user"])) && (isset($_GET["service"])))
+if(!(isset($_GET["user"])) && !(isset($_GET["service"])))
 {
 	// not logged in`
 	echo "please login";
