@@ -121,7 +121,7 @@ function Table_Status($table)
  
 	return $status;
 }
-
+ 
 // this function returns the value at the Lim field of the table
 function Get_Table_Lim($table)
 {
@@ -139,7 +139,7 @@ function Get_Table_Lim($table)
 	mysql_free_result($result);
 	// close db
 	mysql_close($link);
-    
+ 
 	return $retval;
 }
  
@@ -214,10 +214,10 @@ function Unblock_Parking($table, $vehicle)
    	// find the row having the vehicle nummber and unblock it
    	$query = " UPDATE ".$table." SET vehicle_no = 0, mobile_no = 0, Time = 0 WHERE vehicle_no = '$vehicle';";
    	$retval = mysql_query( $query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
-
+ 
 	// close db
 	mysql_close($link);
-
+ 
 	return $retval;
 }
  
@@ -252,12 +252,12 @@ function User_Login()
 			mysql_free_result($result);
        		        if($hash != $userData['password']) // Incorrect password.
         	        {
-           		
+ 
            		        echo "invalid password";
 			}
 			else
 			{ 
-
+ 
 				/* output in necessary format */
 				$token = $userData['uid'];
 				$usertype = $userData['user_type'];
@@ -268,9 +268,10 @@ function User_Login()
 	        	$_SESSION["Username"] = $user;
 	        	$_SESSION["UserType"] = $usertype;
 				$_SESSION["uid"] = $token;
-            	$_SESSION["Sessionid"] = session_id();								
+            	$_SESSION["Sessionid"] = session_id();
+		$sessioninfo = $_SESSION["Sessionid"]; 					
             	echo json_encode(array('session'=>$_SESSION));
-				$query = " UPDATE login SET sessionid = ".$_SESSION['Sessionid']." WHERE vehicle_no = '$vehicle';";
+				$query = " UPDATE login SET sessiondata = '$sessioninfo' WHERE username = '$user';";
    	$retval = mysql_query( $query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
 			}
 		}	
@@ -292,13 +293,16 @@ function User_Logout()
     	        setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"] );
         }
  
+        //$query = " UPDATE login SET sessiondata = 0 WHERE username = '$user';";
+   	//$retval = mysql_query( $query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
+ 
 	// Finally, destroy the session.
 	session_destroy();
 	echo "you have successfully logged out";
  
 }
-
-
+ 
+ 
 function NewUser() 
 { 
  $name = $_GET['name'];
@@ -320,7 +324,7 @@ function NewUser()
    echo "YOUR REGISTRATION IS COMPLETED..."; 
  }
 } 
-
+ 
  
 function User_Signup()
 {
@@ -332,7 +336,7 @@ function User_Signup()
    		// close db
 		mysql_close($link);
 		$numResults = mysql_num_rows($query);
-
+ 
    		//if(!$row = mysql_fetch_array($query) or die(mysql_error()))
    		if($numResults == 0)
    		{ 
@@ -347,14 +351,14 @@ function User_Signup()
  
 function User_Delete()
 {
-
+ 
 	$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
 	mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
    	$query = mysql_query("DELETE FROM login WHERE username = '$_GET[user]'") or die(mysql_error());
 	echo "user $_GET[user] was deleted from database";
 	mysql_close($link);
 }
-
+ 
 function Add_Vehicle()
 {
 	if (isset($_GET['vehicleid']) && isset($_GET['name']) && isset($_GET['phone']) && isset($_GET['company']) && isset($_GET['wheels']))
@@ -368,10 +372,10 @@ function Add_Vehicle()
 		mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
    		$query = mysql_query("SELECT * FROM vehicles WHERE vehicle_no = '$vehicleid'") or die(mysql_error());
 		$numResults = mysql_num_rows($query);
-
+ 
    		if($numResults == 0)
    		{ 
-    		 $query = "INSERT INTO login (name,vehicle_no,wheeler,company_name, mobile_no) VALUES ('$name', '$vehicleid', '$wheels', '$companyname', '$mobilenum')"; 
+    		 $query = "INSERT INTO vehicles (name,vehicle_no,wheeler,company_name, mobile_no) VALUES ('$name', '$vehicleid', '$wheels', '$companyname', '$mobilenum')"; 
  $data = mysql_query ($query)or die(mysql_error());
  			if ($data)
 			{
@@ -390,7 +394,7 @@ function Add_Vehicle()
 		mysql_close($link);
 	}
 }
-
+ 
 function UpdateCompanyInfo($company, $floor, $num2w, $num4w)
 {
 	$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
@@ -427,47 +431,47 @@ function UpdateCompanyInfo($company, $floor, $num2w, $num4w)
 /////						Main					//////////
 //////////////////////////////////////////////////////////////
 session_start();
-
+ 
 if (isset($_GET[service]))
 {
-	
+ 
 	$service = $_GET[service];
 	switch($service)
 	{
 		case SERVICE_USER_LOGIN:
-		
+ 
 			User_Login(); //done
 			break;
-		
+ 
 		case SERVICE_USER_LOGOUT : // done
  
 			User_Logout();
 			break;
-			
+ 
 		case SERVICE_USER_SIGNUP :
  
 			User_Signup(); //needs update for user type
 			break;
-		
+ 
 		case SERVICE_USER_DELETE : //done
  
 			User_Delete();
 			break;
-		
+ 
 		case SERVICE_VEHICLE_REGISTERATION : 
-		
+ 
 			Add_Vehicle();
 			break;
-			
+ 
 		case SERVICE_SETTINGS_CONFIGURE : 
- 			
+ 			$user = $_GET['user'];
 			$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
 			mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
    			$query = mysql_query("SELECT * FROM login WHERE username = '$user'") or die(mysql_error());
 			$userData = mysql_fetch_array($query, MYSQL_ASSOC);
 			$user_type = $userData['user_type'];
 			mysql_close($link);
-			
+ 
 			if($user_type=="admin")
 			{
 				if (isset($_GET["company"]) && isset($_GET["num_2W"]) && isset($_GET["num_4W"]) && isset($_GET["floor"]))
@@ -478,12 +482,12 @@ if (isset($_GET[service]))
 					$num4w = $_GET["num_4W"];
 					$table2W = $company."parking_2W";
 					$table4W = $company."parking_4W";
-					
+ 
 					UpdateCompanyInfo($company, $floor, $num2w, $num4w); //done
-					
+ 
 					Create_Table($table2W, $num2w);
 					Create_Table($table4W, $num4w);
-						
+ 
 				}
 				else
 				{
@@ -494,11 +498,11 @@ if (isset($_GET[service]))
 			{
 				echo "permission denied, insufficient privilages";
 			}
-			
+ 
 			break;
-		
+ 
 		case SERVICE_BLOCK :
-			
+ 
 			if (isset($_GET["vehicleid"]))
 			{
 				$vehicleid = $_GET["vehicleid"];
@@ -513,10 +517,10 @@ if (isset($_GET[service]))
 				$CompanyData = mysql_fetch_array($query, MYSQL_ASSOC);
 				$floor = $CompanyData['parking_floor'];
 				mysql_close($link);
-				
+ 
 				$table2W = $company."parking_2W";
 				$table4W = $company."parking_4W";
-				
+ 
 				if ($wheels == 2)
 				{
 					$block = Block_Parking($table2W, $vehicleid, $mobilenum);		
@@ -534,7 +538,7 @@ if (isset($_GET[service]))
 				if ($block)
 				{
  
-		            echo json_encode(array('slot_id'=>$wheels."W".$retval, 'floor'=>$floor, 'time'=>localtime(), 'vehicle'=>$vehicleid, 'contact'=>$mobilenum ));
+		            echo json_encode(array('slot_id'=>$wheels."W_".$block, 'floor'=>$floor, 'time'=>localtime(), 'vehicle'=>$vehicleid, 'contact'=>$mobilenum ));
  
 				}
 				else
@@ -548,7 +552,7 @@ if (isset($_GET[service]))
  
 			if (isset($_GET["vehicleid"]))
 			{
-				
+ 
 				$vehicleid = $_GET["vehicleid"];
 				$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
 				mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
@@ -563,7 +567,7 @@ if (isset($_GET[service]))
 				mysql_close($link);
 				$table2W = $company."parking_2W";
 				$table4W = $company."parking_4W";
-				
+ 
 				if ($wheels == 2)
 				{
 					$unblock = Unblock_Parking ($table2W, $vehicleid);
@@ -576,7 +580,7 @@ if (isset($_GET[service]))
 				{
 					echo "these vehicles are not supported";
 				}
-				
+ 
 				if($unblock)
 				{
 					echo json_encode(array('time'=>localtime(), 'vehicle'=>$vehicleid, 'contact'=>$mobilenum ));
@@ -591,9 +595,9 @@ if (isset($_GET[service]))
 				echo "insuffiecient params in URI";
 			}
 			break;
-			
+ 
 		case SERVICE_STATUS :
-		
+ 
 			$company = $_GET['company'];
 			$table2W = $company."parking_2W";
 			$table4W = $company."parking_4W";
@@ -607,27 +611,43 @@ if (isset($_GET[service]))
 			$Wheeler_4 = array('blocked'=> $w4_status, 'free' =>$w4_free);
 			echo json_encode(array('company'=> $company,'four_wheeler'=>$Wheeler_4, 'two_wheeler'=>$Wheeler_2 ));
 			break; 			
-		
-//		case SERVICE_SETTINGS_RESET :
-//
-//			if ((Reset_Table($table2W)) && (Reset_Table($table4W)))
-//			{
-//				echo "success"; 
-//			}
-// 
-//			break;
+ 
+		case SERVICE_SETTINGS_RESET :
+                        $user = $_GET['user'];
+			$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+			mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+   			$query = mysql_query("SELECT * FROM login WHERE username = '$user'") or die(mysql_error());
+			$userData = mysql_fetch_array($query, MYSQL_ASSOC);
+			$user_type = $userData['user_type'];
+			mysql_close($link);
+ 
+			if($user_type=="admin")
+			{
+                          $company = $_GET["company"];
+			  $table2W = $company."parking_2W";
+			  $table4W = $company."parking_4W";
+			  if ((Reset_Table($table2W)) && (Reset_Table($table4W)))
+			  {
+				echo "success"; 
+			  }
+                        }
+                        else
+                        {
+                           echo "insufficient privilages";
+                         }
+			break;
 		default:
 			echo "service type not supported";
 			echo $service;
 			break;
 	}
-	
-	
+ 
+ 
 }
 else
 {
 	echo "no service defined";
 }
-
-
-?>
+ 
+ 
+?>	
