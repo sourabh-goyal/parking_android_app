@@ -260,14 +260,18 @@ function User_Login()
 
 				/* output in necessary format */
 				$token = $userData['uid'];
+				$usertype = $userData['user_type'];
 				header('Content-type: application/json');
-                        	session_start();
-	        	        $_SESSION["Login"] = "YES";
-	        	        $_SESSION["Time"] = time();
-	        	        $_SESSION["Username"] = $user;
-	        	        $_SESSION["uid"] = $token;
-            	                $_SESSION["Sessionid"] = session_id();
-            	                echo json_encode(array('session'=>$_SESSION));
+                session_start();
+	        	$_SESSION["Login"] = "YES";
+	        	$_SESSION["Time"] = time();
+	        	$_SESSION["Username"] = $user;
+	        	$_SESSION["UserType"] = $usertype;
+				$_SESSION["uid"] = $token;
+            	$_SESSION["Sessionid"] = session_id();								
+            	echo json_encode(array('session'=>$_SESSION));
+				$query = " UPDATE login SET sessionid = ".$_SESSION['Sessionid']." WHERE vehicle_no = '$vehicle';";
+   	$retval = mysql_query( $query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error());
 			}
 		}	
 		@mysql_close($link);
@@ -300,13 +304,14 @@ function NewUser()
  $name = $_GET['name'];
  $username = $_GET['user'];
  $email = $_GET['email'];
- $password = $_GET['password']; 
+ $password = $_GET['password'];
+ $usertype = $_GET['user_type'];
  $random_salt = hash('sha256', uniqid(mt_rand(1, mt_getrandmax()), true));
  // Create salted password 
  $password = hash('sha256', $password . $random_salt);
  $link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
  mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
- $query = "INSERT INTO login (name,username,email,password, salt) VALUES ('$name','$username','$email','$password', '$random_salt')"; 
+ $query = "INSERT INTO login (name,username,user_type,email,password, salt) VALUES ('$name','$username','$usertype','$email','$password', '$random_salt')"; 
  $data = mysql_query ($query)or die(mysql_error());
  // close db
  mysql_close($link);
@@ -331,7 +336,7 @@ function User_Signup()
    		//if(!$row = mysql_fetch_array($query) or die(mysql_error()))
    		if($numResults == 0)
    		{ 
-    		NewUser(); 
+			NewUser();
    		} 
    		else
    		{
@@ -350,6 +355,77 @@ function User_Delete()
 	mysql_close($link);
 }
 
+function Add_Vehicle()
+{
+	if (isset($_GET['vehicleid']) && isset($_GET['name']) && isset($_GET['phone']) && isset($_GET['company']) && isset($_GET['wheels']))
+	{
+		$vehicleid = $_GET['vehicleid'];
+		$name = $_GET['name'];
+		$mobilenum = $_GET['phone'];
+		$companyname = $_GET['company'];
+		$wheels = $_GET['wheels'];
+		$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+		mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+   		$query = mysql_query("SELECT * FROM vehicles WHERE vehicle_no = '$vehicleid'") or die(mysql_error());
+		$numResults = mysql_num_rows($query);
+
+   		if($numResults == 0)
+   		{ 
+    		 $query = "INSERT INTO login (name,vehicle_no,wheeler,company_name, mobile_no) VALUES ('$name', '$vehicleid', '$wheels', '$companyname', '$mobilenum')"; 
+ $data = mysql_query ($query)or die(mysql_error());
+ 			if ($data)
+			{
+				echo "Registeration successful";
+			}
+			else
+			{
+				echo "Registeration failed";
+			}
+   		} 
+   		else
+   		{
+     		echo "SORRY...VEHICLE ALREADY EXISTS IN DATABASE..."; 
+   		}
+		// close db
+		mysql_close($link);
+	}
+}
+
+function UpdateCompanyInfo($company, $floor, $num2w, $num4w)
+{
+	$link = mysql_connect(DB_HOST,DB_USER,DB_PASSWORD) or die('Cannot connect to the DB');
+	mysql_select_db(DB_NAME,$link) or die('Cannot select the DB');
+   	$query = mysql_query("SELECT * FROM company_info WHERE company_name = '$company'") or die(mysql_error());
+	$numResults = mysql_num_rows($query);
+	if(numResults==0)
+	{
+		$query = "INSERT INTO company_info (company_name,parking_floor,2w_slots, 4w_slots) VALUES ('$company', '$floor', '$num2w', '$num4w')"; 
+ 		$data = mysql_query ($query)or die(mysql_error());
+ 		if ($data)
+		{
+			echo "update successful";
+		}
+		else
+		{
+			echo "update failed";
+		}
+	}
+	else
+	{
+		$query = " UPDATE company_info SET parking_floor = '$floor', 2w_slots = '$num2w', 4w_slots = '$num4w' WHERE comapany_name = '$company';";
+   		$result = mysql_query( $query) or die("A MySQL error has occurred.<br />Error: (" . mysql_errno() . ") " . mysql_error()); 		if($result)
+		{
+			echo "update successful";			
+		}
+		else
+		{
+			echo "update failed";
+		}
+	}
+}
+//////////////////////////////////////////////////////////////
+/////						Main					//////////
+//////////////////////////////////////////////////////////////
 session_start();
 
 if (isset($_GET[service]))
@@ -360,7 +436,7 @@ if (isset($_GET[service]))
 	{
 		case SERVICE_USER_LOGIN:
 		
-			User_Login(); // needs updats for user type
+			User_Login(); //done
 			break;
 		
 		case SERVICE_USER_LOGOUT : // done
@@ -380,7 +456,7 @@ if (isset($_GET[service]))
 		
 		case SERVICE_VEHICLE_REGISTERATION : 
 		
-			Add_Vehicle(); //todo
+			Add_Vehicle();
 			break;
 			
 		case SERVICE_SETTINGS_CONFIGURE : 
@@ -403,7 +479,7 @@ if (isset($_GET[service]))
 					$table2W = $company."parking_2W";
 					$table4W = $company."parking_4W";
 					
-					UpdateCompanyInfo(); //todo
+					UpdateCompanyInfo($company, $floor, $num2w, $num4w); //done
 					
 					Create_Table($table2W, $num2w);
 					Create_Table($table4W, $num4w);
@@ -529,7 +605,7 @@ if (isset($_GET[service]))
 			$w4_free = $w4_lim - $w4_status;
 			$Wheeler_2 = array('blocked'=> $w2_status, 'free' =>$w2_free);
 			$Wheeler_4 = array('blocked'=> $w4_status, 'free' =>$w4_free);
-			echo json_encode(array('four_wheeler'=>$Wheeler_4, 'two_wheeler'=>$Wheeler_2 ));
+			echo json_encode(array('company'=> $company,'four_wheeler'=>$Wheeler_4, 'two_wheeler'=>$Wheeler_2 ));
 			break; 			
 		
 //		case SERVICE_SETTINGS_RESET :
